@@ -24,9 +24,11 @@ type Context = {
 };
 type Props = {
   onChange: (text: string|number) => any,
+  onBlur?: () => void,
   value: string|number,
   type?: string,
   isNew?: boolean,
+  inputRef?: HTMLInputElement => void,
 };
 type DefaultProps = {};
 type State = {
@@ -59,6 +61,10 @@ class AutoSizeInput extends React.Component<Props, State> {
 
   componentDidUpdate(prevProps: Props, prevState: State) {
     this.updateInputWidth();
+    // ? don't work: focus get locked
+    // if (this.props.isNew) {
+    //   this.input.focus();
+    // }
   }
 
   componentWillReceiveProps(nextProps: Props) {
@@ -120,15 +126,25 @@ class AutoSizeInput extends React.Component<Props, State> {
     input.style.padding = '0px 1px';
   }
 
-  done() {
+  onBlur() {
+    this.done()
+      .then(() => {
+        if (this.props.onBlur) {
+          this.props.onBlur();
+        }
+      });
+  }
+
+  done(): Promise<void> {
     const input = this.input;
     input.style.color = this.getColor();
     input.style.boxShadow = 'none';
     input.style.border = 'none';
     input.style.padding = '1px 2px';
     if (this.state.text !== '' + this.props.value || this.props.isNew) {
-      this.props.onChange(this.state.text);
+      return this.props.onChange(this.state.text);
     }
+    return Promise.resolve();
   }
 
   getColor() {
@@ -143,14 +159,20 @@ class AutoSizeInput extends React.Component<Props, State> {
     return (
       <div style={styles.wrapper}>
         <Input
-          innerRef={i => this.input = i}
+          innerRef={i => {
+            this.input = i;
+            if (this.props.inputRef) {
+              this.props.inputRef(i);
+            }
+          }}
           value={this.state.text}
           style={style}
           onChange={e => this.setState({text: e.target.value})}
           onFocus={() => this.onFocus()}
-          onBlur={() => this.done()}
+          onBlur={() => this.onBlur()}
           onKeyDown={e => this.onKeyDown(e)}
         />
+        {this.props.onBlur && <span style={{color: 'red'}}>I have onBlur</span>}
         <div ref={el => this.sizer = el} style={styles.sizer}>{this.state.text}</div>
       </div>
     );

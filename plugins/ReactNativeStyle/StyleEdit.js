@@ -23,7 +23,7 @@ type Context = {
 
 type Props = {
   style: Object,
-  onChange: (attr: string, val: string | number) => void,
+  onChange: (attr: string, val: string | number) => Promise<void>,
   onRename: (oldName: string, newName: string, val: string | number) => void,
 };
 
@@ -38,6 +38,7 @@ type State = {
 class StyleEdit extends React.Component<Props, State> {
   context: Context;
   defaultProps: DefaultProps;
+  newAttrInput: HTMLInputElement | null = null; // ! doesn't work, focus break the history of focus
 
   constructor(props: Props) {
     super(props);
@@ -46,12 +47,17 @@ class StyleEdit extends React.Component<Props, State> {
 
   onChange(name: string, val: string | number) {
     var num = Number(val);
-    this.props.onChange(name, num === Number(val) ? num : val);
+    return this.props.onChange(name, num === Number(val) ? num : val);
   }
 
   onNewSubmit(val: string | number) {
-    this.onChange(this.state.newAttr, val);
-    this.setState({showNew: false, newAttr: '', newValue: ''});
+    return this.onChange(this.state.newAttr, val)
+      .then(() => {
+        return this._setStatePromise({showNew: true, newAttr: '', newValue: ''})
+      })
+      .then(() => {
+        return this.onNewRow();
+      });
   }
 
   onNewAttr(attr: string | number) {
@@ -62,13 +68,32 @@ class StyleEdit extends React.Component<Props, State> {
     }
   }
 
+  onNewRow() {
+    this._setStatePromise({showNew: true})
+      .then(() => this.newAttrInput.focus());
+  }
+
+  onLastValBlur() {
+    // ? derived condition
+    if (this.state.newAttr === '') {
+      this.onNewRow();
+    }
+  }
+
   onListClick(e: Event) {
     if (e.target instanceof Element) {
       if (e.target.tagName === 'INPUT') {
         return;
       }
     }
-    this.setState({showNew: true});
+    // this.setState({showNew: true});
+    this.onNewRow();
+  }
+
+  _setStatePromise(state: State): Promise<void> {
+    return new Promise(resolve => {
+      this.setState(state, () => resolve());
+    });
   }
 
   render() {
@@ -77,7 +102,7 @@ class StyleEdit extends React.Component<Props, State> {
       <ul style={styles.list} onClick={e => this.onListClick(e)}>
         <span style={tagStyle(this.context.theme)}>style</span>
         <span>{' {'}</span>
-        {attrs.map(name => (
+        {attrs.map((name, index) => (
           <li key={'style-' + name} style={styles.listItem} onClick={blockClick}>
             <AutoSizeInput
               type="attr"
@@ -88,26 +113,32 @@ class StyleEdit extends React.Component<Props, State> {
             <AutoSizeInput
               value={this.props.style[name]}
               onChange={val => this.onChange(name, val)}
+              onBlur={index === attrs.length - 1 && (() => this.onLastValBlur())}
             />
             <span style={styles.colon}>;</span>
           </li>
         ))}
-        {this.state.showNew &&
-          <li style={styles.listItem}>
-            <AutoSizeInput
-              isNew={true}
-              type="attr"
-              value={this.state.newAttr}
-              onChange={newAttr => this.onNewAttr(newAttr)}
-            />
-            <span style={styles.colon}>:</span>
-            <AutoSizeInput
-              value={''}
-              onChange={val => this.onNewSubmit(val)}
-            />
-            <span style={styles.colon}>;</span>
-          </li>}
+        <li style={{
+          ...styles.listItem,
+          display: this.state.showNew ? undefined : 'none',
+        }}>
+          <AutoSizeInput
+            inputRef={el => this.newAttrInput = el}
+            isNew={this.state.showNew} // originally true
+            type="attr"
+            value={this.state.newAttr}
+            onChange={newAttr => this.onNewAttr(newAttr)}
+          />
+          <span style={styles.colon}>:</span>
+          <AutoSizeInput
+            value={''}
+            onChange={val => this.onNewSubmit(val)}
+          />
+          <span style={styles.colon}>;</span>
+        </li>
         <span>{'}'}</span>
+        <h2>{this.newAttrInput ? 'has ref to input' : 'doesn\'t have ref to input'}</h2>
+        <p>state.newAttr: {this.state.newAttr}, state.newValue: {this.state.newValue} </p>
       </ul>
     );
   }
