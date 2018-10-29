@@ -24,11 +24,11 @@ type Context = {
 };
 type Props = {
   onChange: (text: string|number) => any,
-  onBlur?: () => void,
+  onTabPressed?: () => any,
+  inputRef?: (input: HTMLInputElement) => any,
   value: string|number,
   type?: string,
   isNew?: boolean,
-  inputRef?: HTMLInputElement => void,
 };
 type DefaultProps = {};
 type State = {
@@ -61,10 +61,6 @@ class AutoSizeInput extends React.Component<Props, State> {
 
   componentDidUpdate(prevProps: Props, prevState: State) {
     this.updateInputWidth();
-    // ? don't work: focus get locked
-    // if (this.props.isNew) {
-    //   this.input.focus();
-    // }
   }
 
   componentWillReceiveProps(nextProps: Props) {
@@ -111,6 +107,8 @@ class AutoSizeInput extends React.Component<Props, State> {
       if (+this.state.text + '' === this.state.text) {
         this.props.onChange(+this.state.text - 1);
       }
+    } else if (e.keyCode === 9 && !e.shiftKey) { // tab pressed without shift
+      this.onTabPressed(e);
     }
   }
 
@@ -126,11 +124,14 @@ class AutoSizeInput extends React.Component<Props, State> {
     input.style.padding = '0px 1px';
   }
 
-  onBlur() {
+  onTabPressed(e: KeyboardEvent) {
+    if (this.props.onTabPressed) {
+      e.preventDefault();
+    }
     this.done()
       .then(() => {
-        if (this.props.onBlur) {
-          this.props.onBlur();
+        if (this.props.onTabPressed) {
+          this.props.onTabPressed();
         }
       });
   }
@@ -169,10 +170,10 @@ class AutoSizeInput extends React.Component<Props, State> {
           style={style}
           onChange={e => this.setState({text: e.target.value})}
           onFocus={() => this.onFocus()}
-          onBlur={() => this.onBlur()}
+          onBlur={() => this.done()}
           onKeyDown={e => this.onKeyDown(e)}
         />
-        {this.props.onBlur && <span style={{color: 'red'}}>I have onBlur</span>}
+        {this.props.onTabPressed && <span style={{color: 'red'}}>I have onTabPressed</span>}
         <div ref={el => this.sizer = el} style={styles.sizer}>{this.state.text}</div>
       </div>
     );

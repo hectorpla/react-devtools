@@ -38,7 +38,7 @@ type State = {
 class StyleEdit extends React.Component<Props, State> {
   context: Context;
   defaultProps: DefaultProps;
-  newAttrInput: HTMLInputElement | null = null; // ! doesn't work, focus break the history of focus
+  newAttrInput: HTMLInputElement | null = null;
 
   constructor(props: Props) {
     super(props);
@@ -53,7 +53,7 @@ class StyleEdit extends React.Component<Props, State> {
   onNewSubmit(val: string | number) {
     return this.onChange(this.state.newAttr, val)
       .then(() => {
-        return this._setStatePromise({showNew: true, newAttr: '', newValue: ''})
+        return this._setStatePromise({showNew: true, newAttr: '', newValue: ''});
       })
       .then(() => {
         return this.onNewRow();
@@ -69,15 +69,12 @@ class StyleEdit extends React.Component<Props, State> {
   }
 
   onNewRow() {
-    this._setStatePromise({showNew: true})
-      .then(() => this.newAttrInput.focus());
-  }
-
-  onLastValBlur() {
-    // ? derived condition
-    if (this.state.newAttr === '') {
-      this.onNewRow();
-    }
+    return this._setStatePromise({showNew: true})
+      .then(() => {
+        if (this.newAttrInput) {
+          this.newAttrInput.focus();
+        }
+      });
   }
 
   onListClick(e: Event) {
@@ -86,11 +83,11 @@ class StyleEdit extends React.Component<Props, State> {
         return;
       }
     }
-    // this.setState({showNew: true});
     this.onNewRow();
   }
 
-  _setStatePromise(state: State): Promise<void> {
+  // TODO partial type of State
+  _setStatePromise(state: any): Promise<void> {
     return new Promise(resolve => {
       this.setState(state, () => resolve());
     });
@@ -113,7 +110,7 @@ class StyleEdit extends React.Component<Props, State> {
             <AutoSizeInput
               value={this.props.style[name]}
               onChange={val => this.onChange(name, val)}
-              onBlur={index === attrs.length - 1 && (() => this.onLastValBlur())}
+              onTabPressed={index === attrs.length - 1 ? () => this.onNewRow() : undefined}
             />
             <span style={styles.colon}>;</span>
           </li>
