@@ -24,7 +24,7 @@ type Context = {
 };
 type Props = {
   onChange: (text: string|number) => any,
-  onTabPressed?: () => any,
+  onNavigateNext?: () => any,
   inputRef?: (input: HTMLInputElement) => any,
   value: string|number,
   type?: string,
@@ -98,7 +98,6 @@ class AutoSizeInput extends React.Component<Props, State> {
   onKeyDown(e: KeyboardEvent) {
     if (e.key === 'Enter' || e.key === 'Escape') {
       this.done();
-      return;
     } else if (e.key === 'ArrowUp') {
       if (+this.state.text + '' === this.state.text) {
         this.props.onChange(+this.state.text + 1);
@@ -112,6 +111,18 @@ class AutoSizeInput extends React.Component<Props, State> {
     }
   }
 
+  onTabPressed(e: KeyboardEvent) {
+    if (this.props.onNavigateNext) {
+      e.preventDefault(); 
+    }
+    this.done()
+      .then(() => { // TODO move navigateNext logic into done()
+        if (this.props.onNavigateNext) {
+          this.props.onNavigateNext();
+        }
+      });
+  }
+
   onFocus() {
     const {theme} = this.context;
 
@@ -122,18 +133,6 @@ class AutoSizeInput extends React.Component<Props, State> {
     input.style.boxShadow = `0 0 3px ${theme.base03}`;
     input.style.border = `1px solid ${theme.base03}`;
     input.style.padding = '0px 1px';
-  }
-
-  onTabPressed(e: KeyboardEvent) {
-    if (this.props.onTabPressed) {
-      e.preventDefault();
-    }
-    this.done()
-      .then(() => {
-        if (this.props.onTabPressed) {
-          this.props.onTabPressed();
-        }
-      });
   }
 
   done(): Promise<void> {
@@ -173,7 +172,7 @@ class AutoSizeInput extends React.Component<Props, State> {
           onBlur={() => this.done()}
           onKeyDown={e => this.onKeyDown(e)}
         />
-        {this.props.onTabPressed && <span style={{color: 'red'}}>I have onTabPressed</span>}
+        {this.props.onNavigateNext && <span style={{color: 'red'}}>I have onNavigateNext</span>}
         <div ref={el => this.sizer = el} style={styles.sizer}>{this.state.text}</div>
       </div>
     );
